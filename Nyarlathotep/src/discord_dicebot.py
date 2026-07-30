@@ -9,12 +9,14 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 
+intents.message_content = True
+
 def judgement(result, target):
     if result <= 5:
         return "クリティカル"
-    elif result <= target / 5:
+    elif result <= target // 5:
         return "エクストリーム成功"
-    elif result < target / 2:
+    elif result < target // 2:
         return "ハード成功"
     elif result <= target:
         return "成功"
@@ -39,7 +41,7 @@ async def on_message(message):
 
             result = random.randint(1,100)
             judge = judgement(result, target)
-            await message.channel.send(f'1d100 --> {result} ({judge})')
+            await message.channel.send(f'{message.author.mention} 1d100 \n --> {result} ({judge})')
         except (IndexError, ValueError):
             await message.channel.send("使い方: dd num")
 
