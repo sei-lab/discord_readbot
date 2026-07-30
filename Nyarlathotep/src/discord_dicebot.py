@@ -65,4 +65,10 @@ async def on_message(message):
         sort_rolls = sorted(rolls, reverse=False)
         await message.channel.send(f'{message.author.mention} {num_dice}b{num_sides} \n --> {sort_rolls}')
 
+    if message.content.startswith('よぐぱんち'):
+        num_dice, num_sides = 1,3
+        # Roll the dice
+        rolls = random.randint(1, num_sides)
+        await message.channel.send(f'{message.author.mention} {num_dice}d{num_sides} \n --> {sort_rolls}')
+
 client.run(TOKEN)
