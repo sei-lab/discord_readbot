@@ -11,7 +11,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 
-@client.event
+# @client.event
 # async def on_ready():
 #     channel = client.get_channel(1532005786883063858)  # Replace with your channel ID
 #     await channel.send("よぐ=そとーす参上！")
