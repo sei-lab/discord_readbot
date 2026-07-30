@@ -57,7 +57,7 @@ async def on_message(message):
         await message.channel.send("全宇宙を同時観測中")
         return
 
-    if re.search(r"好き", message.content):
+    if re.search(r"(?:好き|すき♡)", message.content):
         await message.channel.send("知ってる")
         return
 
