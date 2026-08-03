@@ -71,7 +71,7 @@ async def on_message(message):
             if num_dice <= 0 or num_sides <= 0:
                 await message.channel.send(f"{message.author.mention} そのダイスは振れないよ(^^)")
                 return
-            elif num_dice * num_sides > 1000000:
+            elif num_dice * num_sides > 1000000000 or (operator == "^" and modifier and num_dice * num_sides * modifier > 1000000000):
                 await message.channel.send(f"{message.author.mention} ちょちょちょ多すぎるって...(^^)")
                 return
 
@@ -90,7 +90,7 @@ async def on_message(message):
 
                 expr = f"{num_dice}d{num_sides}"
                 if operator:
-                    expr += f"{operator}{modifier}"
+                    expr += f"\\{operator}{modifier}"
 
                 if num_dice == 1:
                     detail = str(rolls[0])
@@ -98,7 +98,7 @@ async def on_message(message):
                     detail = f"{rolls} = {sum(rolls)}"
 
                 if operator:
-                    detail += f" → {total}"
+                    detail += f"\\{operator}{modifier} \n--> {total}"
 
                 await message.channel.send(
                     f"{message.author.mention} {expr}\n--> {detail}"
@@ -117,8 +117,8 @@ async def on_message(message):
                 await message.channel.send(
                     f"{message.author.mention} "
                     f"{num_dice}d{num_sides}^{modifier}\n"
-                    f"--> {totals}\n"
-                    f"= {result}"
+                    f"--> {totals}^{modifier}\n"
+                    f"--> {result}"
                 )
             return
 
