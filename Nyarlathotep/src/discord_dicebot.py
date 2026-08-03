@@ -2,6 +2,7 @@ import discord
 import os
 from dotenv import load_dotenv
 import random
+import math
 import re
 
 load_dotenv()
@@ -42,61 +43,6 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    if message.content.startswith("dd"):
-        parts = message.content.split()
-
-        result = roll_dice(1, 100)  # Roll a single d100
-
-        if len(parts) == 1:
-            await message.channel.send(
-                f"{message.author.mention} 1d100\n--> {result}")
-
-        elif len(parts) == 2:
-            # dd 85
-            try:
-                target = int(parts[1])
-                judge = judgement(result, target)
-
-                await message.channel.send(
-                    f"{message.author.mention} 1d100\n--> {result} ({judge})"
-                )
-            except ValueError:
-                await message.channel.send("使い方: dd または dd num")
-
-        else:
-            await message.channel.send("使い方: dd または dd num")
-
-    if re.fullmatch(r"(\d+)d(\d+)", message.content):
-        # Extract the number of dice and sides from the command
-        num_dice, num_sides = map(int, re.fullmatch(r"(\d+)d(\d+)", message.content).groups())
-        if num_dice < 1 or num_sides < 1:
-            await message.channel.send("そのダイスは振れないよ(^^;)")
-            return
-        elif num_dice > 100 or (num_dice * num_sides) > 100000:
-            await message.channel.send("ちょちょちょ多すぎるよ(^^;)")
-            return
-
-        rolls = roll_dice(num_dice, num_sides)
-        if num_dice == 1:
-            await message.channel.send(f'{message.author.mention} {num_dice}d{num_sides} \n --> {rolls}')
-        else:
-            total = sum(rolls)
-            await message.channel.send(f'{message.author.mention} {num_dice}d{num_sides} \n --> {rolls} --> {total}')
-
-    if re.fullmatch(r"(\d+)b(\d+)", message.content):
-        # Extract the number of dice and sides from the command
-        num_dice, num_sides = map(int, re.fullmatch(r"(\d+)b(\d+)", message.content).groups())
-        if num_dice < 1 or num_sides < 1:
-            await message.channel.send("そのダイスは振れないよ(^^;)")
-            return
-        elif num_dice > 100 or (num_dice * num_sides) > 100000:
-            await message.channel.send("ちょちょちょ多すぎるよ(^^;)")
-            return
-
-        rolls = roll_dice(num_dice, num_sides)
-        sort_rolls = sorted(rolls, reverse=False)
-        await message.channel.send(f'{message.author.mention} {num_dice}b{num_sides} \n --> {sort_rolls}')
-
     if message.content.startswith('よぐぱんち'):
         num_dice, num_sides = 1,3
         rolls = roll_dice(num_dice, num_sides)
@@ -106,5 +52,78 @@ async def on_message(message):
         result = random.randint(1,100)
         judge = judgement(result, 95)
         await message.channel.send(f'{message.author.mention} 精神分析 1d100 \n --> {result} ({judge})')
+
+    text = message.content.split()
+    for i, t in enumerate(text):
+        if t.lower() == "dd":
+            rolls = roll_dice(1, 100)
+            if i + 1 < len(text) and text[i+1].isdigit():
+                target = int(text[i+1])
+                judge = judgement(rolls[0], target)
+                await message.channel.send(f'{message.author.mention} 1d100 \n --> {rolls[0]} ({judge})')
+            else:
+                await message.channel.send(f'{message.author.mention} 1d100 \n --> {rolls[0]}')
+            return
+        m = re.fullmatch(r"(\d+)[dD](\d+)(?:([+\-*/^])(\d+))?", t)
+        if m:
+            num_dice = int(m.group(1))
+            num_sides = int(m.group(2))
+            operator = m.group(3)
+            modifier = int(m.group(4)) if m.group(4) else None
+
+            if num_dice <= 0 or num_sides <= 0:
+                await message.channel.send(f"{message.author.mention} そのダイスは振れないよ(^^)")
+                return
+            elif num_dice * num_sides > 1000000:
+                await message.channel.send(f"{message.author.mention} ちょちょちょ多すぎるって...(^^)")
+                return
+
+            # 通常のダイス
+            if operator != "^":
+                rolls, total = roll_dice(num_dice, num_sides)
+
+                if operator == "+":
+                    total += modifier
+                elif operator == "-":
+                    total -= modifier
+                elif operator == "*":
+                    total *= modifier
+                elif operator == "/":
+                    total //= modifier
+
+                expr = f"{num_dice}d{num_sides}"
+                if operator:
+                    expr += f"{operator}{modifier}"
+
+                if num_dice == 1:
+                    detail = str(rolls[0])
+                else:
+                    detail = f"{rolls} = {sum(rolls)}"
+
+                if operator:
+                    detail += f" → {total}"
+
+                await message.channel.send(
+                    f"{message.author.mention} {expr}\n--> {detail}"
+                )
+
+            # ^ の特殊処理
+            else:
+                totals = []
+
+        for _ in range(modifier):
+            _, total = roll_dice(num_dice, num_sides)
+            totals.append(total)
+
+        result = math.prod(totals)
+
+        await message.channel.send(
+            f"{message.author.mention} "
+            f"{num_dice}d{num_sides}^{modifier}\n"
+            f"--> {totals}\n"
+            f"= {result}"
+        )
+
+    return
 
 client.run(TOKEN)
