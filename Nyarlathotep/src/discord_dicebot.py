@@ -71,11 +71,18 @@ async def on_message(message):
             if num_dice <= 0 or num_sides <= 0:
                 await message.channel.send(f"{message.author.mention} そのダイスは振れないよ(^^)")
                 return
-            elif num_dice * num_sides > 10000000 or (operator == "^" and modifier and num_dice * num_sides * modifier > 1000000000):
+            elif num_dice * num_sides > 1000000000 or (operator == "^" and modifier and num_dice * num_sides * modifier > 1000000000):
                 await message.channel.send(f"{message.author.mention} ちょちょちょ多すぎるって...(^^)")
                 return
-            if operator == "/" and modifier == 0:
+            elif operator == "/" and modifier == 0:
                 await message.channel.send("0では割れないよ(^^)")
+                return
+            digits = len(str(num_sides))
+            estimated = num_dice * (digits + 2) + 100  # メンションなどの余裕
+            if estimated > 1900:
+                await message.channel.send(
+                f"{message.author.mention} 出力が長すぎるよ...(^^)"
+                )
                 return
 
             # 通常のダイス
