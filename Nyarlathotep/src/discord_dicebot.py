@@ -14,11 +14,9 @@ client = discord.Client(intents=intents)
 intents.message_content = True
 
 def roll_dice(num_dice, num_sides):
-    if num_dice == 1:
-        rolls = random.randint(1, num_sides)
-    else:
-        rolls = [random.randint(1, num_sides) for _ in range(num_dice)]
-    return rolls
+    rolls = [random.randint(1, num_sides) for _ in range(num_dice)]
+    total = sum(rolls)
+    return rolls, total
 
 def judgement(result, target):
     if result <= 5:
@@ -44,25 +42,24 @@ async def on_message(message):
         return
 
     if message.content.startswith('よぐぱんち'):
-        num_dice, num_sides = 1,3
-        rolls = roll_dice(num_dice, num_sides)
-        await message.channel.send(f'{message.author.mention} {num_dice}d{num_sides} \n --> {rolls}')
+        rolls, result = roll_dice(1, 3)
+        await message.channel.send(f'{message.author.mention} {num_dice}d{num_sides} \n --> {result}')
 
     if re.search(r"精神分析",message.content) and str(message.author.id) == "1529660407525019799":
-        result = random.randint(1,100)
+        rolls, result = roll_dice(1, 100)
         judge = judgement(result, 95)
         await message.channel.send(f'{message.author.mention} 精神分析 1d100 \n --> {result} ({judge})')
 
     text = message.content.split()
     for i, t in enumerate(text):
         if t.lower() == "dd":
-            rolls = roll_dice(1, 100)
+            rolls, result = roll_dice(1, 100)
             if i + 1 < len(text) and text[i+1].isdigit():
                 target = int(text[i+1])
-                judge = judgement(rolls[0], target)
-                await message.channel.send(f'{message.author.mention} 1d100 \n --> {rolls[0]} ({judge})')
+                judge = judgement(result, target)
+                await message.channel.send(f'{message.author.mention} 1d100 \n --> {result} ({judge})')
             else:
-                await message.channel.send(f'{message.author.mention} 1d100 \n --> {rolls[0]}')
+                await message.channel.send(f'{message.author.mention} 1d100 \n --> {result}')
             return
         m = re.fullmatch(r"(\d+)[dD](\d+)(?:([+\-*/^])(\d+))?", t)
         if m:
