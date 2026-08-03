@@ -29,16 +29,9 @@ async def on_message(message):
     if str(message.author.id) in blacklist:
         return
 
-    if re.search(r"よぐ=そとーす", message.content):
+    if re.search(r"よぐ", message.content) and not re.search(r"さす", message.content) and not message.author.id in talk_list:
         await message.channel.send("よんだ？")
-        if not message.author.id in talk_list:
-            talk_list.append(message.author.id)
-        return
-
-    if re.search(r"よぐ", message.content) and not re.search(r"さす", message.content):
-        await message.channel.send("よんだ？")
-        if not message.author.id in talk_list:
-            talk_list.append(message.author.id)
+        talk_list.append(message.author.id)
         return
 
     if not message.author.id in talk_list:
@@ -151,6 +144,10 @@ async def on_message(message):
 
     if re.search(r"(?:きゃわ|きゃわわ|きゃわいい|きゃわいー|きゃわいーな|きゃわいーね|きゃわいーぞ|きゃわいーよ|きゃわいーだね|きゃわいーだよ|きゃわいーだな)", message.content):
         await message.channel.send("えへへ、照れるね(〃▽〃)ﾎﾟｯ")
+        return
+
+    if re.search(r"よぐ", message.content) and not re.search(r"さす", message.content):
+        await message.channel.send("聞こえてるよ～")
         return
 
 

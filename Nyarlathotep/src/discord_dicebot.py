@@ -12,6 +12,13 @@ client = discord.Client(intents=intents)
 
 intents.message_content = True
 
+def roll_dice(num_dice, num_sides):
+    if num_dice == 1:
+        rolls = random.randint(1, num_sides)
+    else:
+        rolls = [random.randint(1, num_sides) for _ in range(num_dice)]
+    return rolls
+
 def judgement(result, target):
     if result <= 5:
         return "クリティカル"
@@ -35,40 +42,64 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    if message.content.startswith('dd'):
-        # Extract the number of sides from the command
-        try:
-            target = int(message.content.split()[1])
+    if message.content.startswith("dd"):
+        parts = message.content.split()
 
-            result = random.randint(1,100)
-            judge = judgement(result, target)
-            await message.channel.send(f'{message.author.mention} 1d100 \n --> {result} ({judge})')
-        except (IndexError, ValueError):
-            await message.channel.send("使い方: dd num")
+        result = roll_dice(1, 100)  # Roll a single d100
+
+        if len(parts) == 1:
+            await message.channel.send(
+                f"{message.author.mention} 1d100\n--> {result}")
+
+        elif len(parts) == 2:
+            # dd 85
+            try:
+                target = int(parts[1])
+                judge = judgement(result, target)
+
+                await message.channel.send(
+                    f"{message.author.mention} 1d100\n--> {result} ({judge})"
+                )
+            except ValueError:
+                await message.channel.send("使い方: dd または dd num")
+
+        else:
+            await message.channel.send("使い方: dd または dd num")
 
     if re.fullmatch(r"(\d+)d(\d+)", message.content):
         # Extract the number of dice and sides from the command
         num_dice, num_sides = map(int, re.fullmatch(r"(\d+)d(\d+)", message.content).groups())
         if num_dice < 1 or num_sides < 1:
-            await message.channel.send("そのダイスは振れないよ")
+            await message.channel.send("そのダイスは振れないよ(^^;)")
             return
-        # Roll the dice
-        rolls = [random.randint(1, num_sides) for _ in range(num_dice)]
-        total = sum(rolls)
-        await message.channel.send(f'{message.author.mention} {num_dice}d{num_sides} \n --> {rolls} --> {total}')
+        elif num_dice > 100 or (num_dice * num_sides) > 100000:
+            await message.channel.send("ちょちょちょ多すぎるよ(^^;)")
+            return
+
+        rolls = roll_dice(num_dice, num_sides)
+        if num_dice == 1:
+            await message.channel.send(f'{message.author.mention} {num_dice}d{num_sides} \n --> {rolls}')
+        else:
+            total = sum(rolls)
+            await message.channel.send(f'{message.author.mention} {num_dice}d{num_sides} \n --> {rolls} --> {total}')
 
     if re.fullmatch(r"(\d+)b(\d+)", message.content):
         # Extract the number of dice and sides from the command
         num_dice, num_sides = map(int, re.fullmatch(r"(\d+)b(\d+)", message.content).groups())
-        # Roll the dice
-        rolls = [random.randint(1, num_sides) for _ in range(num_dice)]
+        if num_dice < 1 or num_sides < 1:
+            await message.channel.send("そのダイスは振れないよ(^^;)")
+            return
+        elif num_dice > 100 or (num_dice * num_sides) > 100000:
+            await message.channel.send("ちょちょちょ多すぎるよ(^^;)")
+            return
+
+        rolls = roll_dice(num_dice, num_sides)
         sort_rolls = sorted(rolls, reverse=False)
         await message.channel.send(f'{message.author.mention} {num_dice}b{num_sides} \n --> {sort_rolls}')
 
     if message.content.startswith('よぐぱんち'):
         num_dice, num_sides = 1,3
-        # Roll the dice
-        rolls = random.randint(1, num_sides)
+        rolls = roll_dice(num_dice, num_sides)
         await message.channel.send(f'{message.author.mention} {num_dice}d{num_sides} \n --> {rolls}')
 
     if re.search(r"精神分析",message.content) and str(message.author.id) == "1529660407525019799":
