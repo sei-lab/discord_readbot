@@ -9,9 +9,8 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 intents = discord.Intents.default()
-client = discord.Client(intents=intents)
-
 intents.message_content = True
+client = discord.Client(intents=intents)
 
 def roll_dice(num_dice, num_sides):
     rolls = [random.randint(1, num_sides) for _ in range(num_dice)]
@@ -42,7 +41,8 @@ async def on_message(message):
         return
 
     if message.content.startswith('よぐぱんち'):
-        rolls, result = roll_dice(1, 3)
+        num_dice, num_sides = 1, 100
+        rolls, result = roll_dice(num_dice, num_sides)
         await message.channel.send(f'{message.author.mention} {num_dice}d{num_sides} \n --> {result}')
 
     if re.search(r"精神分析",message.content) and str(message.author.id) == "1529660407525019799":
@@ -73,6 +73,9 @@ async def on_message(message):
                 return
             elif num_dice * num_sides > 1000000000 or (operator == "^" and modifier and num_dice * num_sides * modifier > 1000000000):
                 await message.channel.send(f"{message.author.mention} ちょちょちょ多すぎるって...(^^)")
+                return
+            if operator == "/" and modifier == 0:
+                await message.channel.send("0では割れないよ(^^)")
                 return
 
             # 通常のダイス
