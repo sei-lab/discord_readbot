@@ -108,19 +108,18 @@ async def on_message(message):
             else:
                 totals = []
 
-        for _ in range(modifier):
-            _, total = roll_dice(num_dice, num_sides)
-            totals.append(total)
+                for _ in range(modifier):
+                    _, total = roll_dice(num_dice, num_sides)
+                    totals.append(total)
 
-        result = math.prod(totals)
+                result = math.prod(totals)
 
-        await message.channel.send(
-            f"{message.author.mention} "
-            f"{num_dice}d{num_sides}^{modifier}\n"
-            f"--> {totals}\n"
-            f"= {result}"
-        )
-
-    return
+                await message.channel.send(
+                    f"{message.author.mention} "
+                    f"{num_dice}d{num_sides}^{modifier}\n"
+                    f"--> {totals}\n"
+                    f"= {result}"
+                )
+            return
 
 client.run(TOKEN)
