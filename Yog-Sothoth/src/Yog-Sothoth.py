@@ -37,7 +37,7 @@ async def on_message(message):
     if not message.author.id in talk_list:
         return
 
-    if re.search(r"(?:さようなら|さよなら|さいなら|じゃあね|バイバイ|またね|ばいばい|じゃあね)", message.content):
+    if re.search(r"(?:さようなら|さよなら|さいなら|じゃあね|バイバイ|またね|ばいばい)", message.content):
         await message.channel.send(f"またね {message.author.mention}！")
         talk_list.remove(message.author.id)
         return
