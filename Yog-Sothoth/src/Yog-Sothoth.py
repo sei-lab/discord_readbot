@@ -147,7 +147,14 @@ async def on_message(message):
         return
 
     if message.content.startswith("よぐ"):
-        await message.channel.send("聞こえてるよ～")
+        responces = [
+            "聞いてるよ～",
+            "なになに？",
+            "どうしたの？",
+            "はいは～い",
+            "！！"
+        ]
+        await message.channel.send(random.choice(responces))
         return
 
 

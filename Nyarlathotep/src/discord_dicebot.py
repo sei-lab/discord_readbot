@@ -18,6 +18,8 @@ def roll_dice(num_dice, num_sides):
     return rolls, total
 
 def judgement(result, target):
+    if target <= 0:
+        return "ファンブル"
     if result <= 5:
         return "クリティカル"
     elif result <= target // 5:
