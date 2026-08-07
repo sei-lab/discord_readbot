@@ -146,7 +146,7 @@ async def on_message(message):
         await message.channel.send("えへへ、照れるね(〃▽〃)ﾎﾟｯ")
         return
 
-    if message.content.startswith("よぐ"):
+    if re.search(r"よぐ", message.content) and not re.search(r"さす", message.content) and not re.search(r"よぐぱんち", message.content):
         responces = [
             "聞いてるよ～",
             "なになに？",

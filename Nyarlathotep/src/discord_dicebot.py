@@ -24,7 +24,7 @@ def judgement(result, target):
         return "クリティカル"
     elif result <= target // 5:
         return "エクストリーム成功"
-    elif result < target // 2:
+    elif result <= target // 2:
         return "ハード成功"
     elif result <= target:
         return "成功"
@@ -43,7 +43,7 @@ async def on_message(message):
         return
 
     if message.content.startswith('よぐぱんち'):
-        num_dice, num_sides = 1, 100
+        num_dice, num_sides = 1, 3
         rolls, result = roll_dice(num_dice, num_sides)
         await message.channel.send(f'{message.author.mention} {num_dice}d{num_sides} \n --> {result}')
 
@@ -56,7 +56,7 @@ async def on_message(message):
     for i, t in enumerate(text):
         if t.lower() == "dd":
             rolls, result = roll_dice(1, 100)
-            if i + 1 < len(text) and text[i+1].isdigit():
+            if i + 1 < len(text) and (text[i + 1].isdigit() or (text[i + 1].startswith('-') and text[i + 1][1:].isdigit())):
                 target = int(text[i+1])
                 judge = judgement(result, target)
                 await message.channel.send(f'{message.author.mention} 1d100 \n --> {result} ({judge})')
