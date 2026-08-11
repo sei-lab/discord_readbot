@@ -8,9 +8,10 @@ import re
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-DATA_PATH = os.getenv("DATA_PATH")
+TRPG_PATH = os.getenv("TRPG_PATH")
+CHARACTOR_PATH = os.getenv("CHARACTOR_PATH")
 
-with open(DATA_PATH, "r", encoding="utf-8") as f:
+with open(TRPG_PATH, "r", encoding="utf-8") as f:
     data = json.load(f)
 
 skill_list = data.get("skills", [])
