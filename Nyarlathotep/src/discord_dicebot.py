@@ -79,17 +79,28 @@ def check_next_word(word):
 
     return skill, target
 
-def parse(text, i , string):
-    if text[i].lower() == string:
+def parse(text, i):
+    if text[i].lower() == "dd":
         if i + 1 < len(text):
-            return check_next_word(text[i + 1])
-        return None, None
+            skill, target = check_next_word(text[i + 1])
+            return skill, target, False
+        return None, None, False
 
-    m = re.fullmatch(rf"{string}(-?\d+)", text[i])
+    m = re.fullmatch(rf"dd(-?\d+)", text[i])
     if m:
-        return None, int(m.group(1))
+        return None, int(m.group(1)), False
 
-    return None, None
+    if text[i].lower() == "sdd":
+        if i + 1 < len(text):
+            skill, target = check_next_word(text[i + 1])
+            return skill, target, True
+        return None, None, True
+
+    m = re.fullmatch(rf"sdd(-?\d+)", text[i])
+    if m:
+        return None, int(m.group(1)), True
+
+    return None, None, False
 
 @client.event
 async def on_ready():
@@ -139,8 +150,9 @@ async def on_message(message):
 
     text = message.content.split()
     for i, t in enumerate(text):
-        skill, target = parse(text, i , "dd")
-        if skill is not None or target is not None or t.lower() == "dd":
+
+        skill, target, secret= parse(text, i)
+        if skill is not None or target is not None or t.lower() in ["dd", "sdd"]:
             num_dice, num_sides = 1, 100
             rolls, result = roll_dice(num_dice, num_sides)
 
@@ -159,32 +171,13 @@ async def on_message(message):
                 skill=skill
             )
 
-            await message.channel.send(message_content)
-        
-        skill, target = parse(text, i, "sdd")
-        if skill is not None or target is not None or t.lower() == "sdd":
-            num_dice, num_sides = 1, 100
-            rolls, result = roll_dice(num_dice, num_sides)
-
-            judge = None
-            if target is not None:
-                judge = judgement(result, target)
-
-            message_content = create_message_content(
-                message.author.mention,
-                num_dice,
-                num_sides,
-                rolls,
-                result,
-                target,
-                judge,
-                skill=skill
-            )
-
-            if message.guild is not None:
-                await message.delete()
-                await message.channel.send("🎲secret dice(^^)🎲")
-            await message.author.send(message_content)
+            if secret:
+                if message.guild is not None:
+                    await message.delete()
+                    await message.channel.send("🎲secret dice(^^)🎲")
+                await message.author.send(message_content)
+            else:
+                await message.channel.send(message_content)
 
         
 client.run(TOKEN)
