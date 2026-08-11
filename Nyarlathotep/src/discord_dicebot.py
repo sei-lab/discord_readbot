@@ -9,12 +9,12 @@ import re
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
-skill_file_path = "../data/dice_data.json"
+skill_file_path = "/home/seifu/dev/python/projects/discord/Nyarlathotep/data/dice_data.json"
 with open(skill_file_path, "r", encoding="utf-8") as f:
     data = json.load(f)
 
 skill_list = data.get("skills", [])
-blacklist = data.get("blacklist", [])
+blacklists = data.get("blacklists", [])
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -41,7 +41,7 @@ def judgement(result, target):
     else:
         return "失敗"
 
-def create_message_content(author, skill=None, num_dice, num_sides, rolls, total, result, judge=None, operator=None, modifier=None):
+def create_message_content(author, num_dice, num_sides, rolls, total, result, judge=None, operator=None, modifier=None ,skill=None):
     expr = f"{author}"
 
     if skill is not None:
@@ -84,14 +84,14 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    if message.author in blacklist:
+    if message.author in blacklists:
         return
 
     if message.content.startswith('よぐぱんち'):
         author = message.author.mention
         num_dice, num_sides = 1, 3
         rolls, result = roll_dice(num_dice, num_sides)
-        message_content = create_message_content(author, None, num_dice, num_sides, rolls, sum(rolls), result)
+        message_content = create_message_content(author, num_dice, num_sides, rolls, sum(rolls), result)
         await message.channel.send(message_content)
 
     if re.search(r"精神分析",message.content) and str(message.author.id) == "1529660407525019799":
@@ -99,7 +99,7 @@ async def on_message(message):
         skill = "精神分析"
         rolls, result = roll_dice(1, 100)
         judge = judgement(result, 95)
-        message_content = create_message_content(author, skill, 1, 100, rolls, sum(rolls), result, judge)
+        message_content = create_message_content(author, num_dice, num_sides, rolls, sum(rolls), result, judge, skill=skill)
         await message.channel.send(message_content)
 
     text = message.content.split()
@@ -110,19 +110,19 @@ async def on_message(message):
                 skill ,target = chack_next_word(text[i+1])
                 if target is not None:
                     judge = judgement(result, target)
-                    message_content = create_message_content(message.author.mention, skill, 1, 100, rolls, sum(rolls), result, judge) 
+                    message_content = create_message_content(message.author.mention, 1, 100, rolls, sum(rolls), result, judge, skill=skill)
                 else:
-                    message_content = create_message_content(message.author.mention, skill, 1, 100, rolls, sum(rolls), result)
-                message_content = create_message_content(message.author.mention, None, 1, 100, rolls, sum(rolls), result, judge)
+                    message_content = create_message_content(message.author.mention, 1, 100, rolls, sum(rolls), result, skill=skill)
+                message_content = create_message_content(message.author.mention, 1, 100, rolls, sum(rolls), result, judge)
             else:
-                message_content = create_message_content(message.author.mention, None, 1, 100, rolls, sum(rolls), result, None)
+                message_content = create_message_content(message.author.mention, 1, 100, rolls, sum(rolls), result, None)
             await message.channel.send(message_content)
         m = re.fullmatch(r"dd(\d+)",t)
         if m and (m.group(1).isdigit() or (m.group(1).startswith('-') and m.group(1)[1:].isdigit())):
             target = int(m.group(1))
             rolls, result = roll_dice(1, 100)
             judge = judgement(result, target)
-            message_content = create_message_content(message.author.mention, None, 1, 100, rolls, sum(rolls), result, judge)
+            message_content = create_message_content(message.author.mention, 1, 100, rolls, sum(rolls), result, judge)
             await message.channel.send(message_content)
         
         m = re.fullmatch(r"(\d+)[dD](\d+)(?:([+\-*/^])(\d+))?", t)
