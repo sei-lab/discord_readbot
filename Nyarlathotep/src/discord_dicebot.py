@@ -63,6 +63,7 @@ async def on_message(message):
             else:
                 await message.channel.send(f'{message.author.mention} 1d100 \n --> {result}')
             return
+        
         m = re.fullmatch(r"(\d+)[dD](\d+)(?:([+\-*/^])(\d+))?", t)
         if m:
             num_dice = int(m.group(1))
