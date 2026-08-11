@@ -79,25 +79,13 @@ def check_next_word(word):
 
     return skill, target
 
-def parse_dd(text, i):
-    if text[i].lower() == "dd":
+def parse(text, i , string):
+    if text[i].lower() == string:
         if i + 1 < len(text):
             return check_next_word(text[i + 1])
         return None, None
 
-    m = re.fullmatch(r"dd(-?\d+)", text[i])
-    if m:
-        return None, int(m.group(1))
-
-    return None, None
-
-def parse_sdd(text, i):
-    if text[i].lower() == "sdd":
-        if i + 1 < len(text):
-            return check_next_word(text[i + 1])
-        return None, None
-
-    m = re.fullmatch(r"sdd(-?\d+)", text[i])
+    m = re.fullmatch(rf"{string}(-?\d+)", text[i])
     if m:
         return None, int(m.group(1))
 
@@ -141,7 +129,7 @@ async def on_message(message):
 
     text = message.content.split()
     for i, t in enumerate(text):
-        skill, target = parse_dd(text, i)
+        skill, target = parse(text, i , "dd")
         if skill is not None or target is not None or t.lower() == "dd":
             num_dice, num_sides = 1, 100
             rolls, result = roll_dice(num_dice, num_sides)
@@ -162,7 +150,8 @@ async def on_message(message):
             )
 
             await message.channel.send(message_content)
-        skill, target = parse_sdd(text, i)
+        
+        skill, target = parse(text, i, "sdd")
         if skill is not None or target is not None or t.lower() == "sdd":
             num_dice, num_sides = 1, 100
             rolls, result = roll_dice(num_dice, num_sides)
@@ -185,4 +174,6 @@ async def on_message(message):
             await message.delete()
             await message.channel.send("🎲secret dice(^^)🎲")
             await message.author.send(message_content)
+
+        
 client.run(TOKEN)
