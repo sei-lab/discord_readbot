@@ -74,8 +74,7 @@ def check_next_word(word):
     if word.isdigit() or (word.startswith('-') and word[1:].isdigit()):
         target = int(word)
     elif word in skill_list:
-        # skill = word
-        skill = None
+        skill = word
 
     return skill, target
 
@@ -136,6 +135,7 @@ async def on_message(message):
         target = 95
         rolls, result = roll_dice(num_dice, num_sides)
         judge = judgement(result, target)
+
         message_content = create_message_content(
             author,
             num_dice,
@@ -145,6 +145,7 @@ async def on_message(message):
             target,
             judge,
             skill=skill)
+        
         await message.channel.send(message_content)
         return
 
