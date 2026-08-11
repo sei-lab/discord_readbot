@@ -9,11 +9,12 @@ import re
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
-skill_file_path = "skill_list.json"
+skill_file_path = "../data/dice_data.json"
 with open(skill_file_path, "r", encoding="utf-8") as f:
     data = json.load(f)
 
 skill_list = data.get("skills", [])
+blacklist = data.get("blacklist", [])
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -81,6 +82,9 @@ async def on_ready():
 @client.event
 async def on_message(message):
     if message.author == client.user:
+        return
+
+    if message.author in blacklist:
         return
 
     if message.content.startswith('よぐぱんち'):
