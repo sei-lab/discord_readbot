@@ -1,5 +1,8 @@
 import discord
 import os
+import csv
+import io
+import asyncio
 from dotenv import load_dotenv
 import json
 import random
@@ -119,7 +122,6 @@ def get_charactor(message):
     charactor_id = user_data["id"]
     return charactor_id
 
-
 def get_skill_value(charactor_id, skill):
     character_data = charactor["charactor"].get(charactor_id)
 
@@ -132,6 +134,191 @@ def get_skill_value(charactor_id, skill):
         return None
 
     return skills.get(skill)
+
+def generate_charactor_id():
+    """既存のキャラクターIDから次のIDを生成する"""
+
+    max_id = 0
+
+    for charactor_id in charactor["charactor"]:
+        m = re.fullmatch(r"C-(\d+)", charactor_id)
+
+        if m:
+            number = int(m.group(1))
+            max_id = max(max_id, number)
+
+    return f"C-{max_id + 1:04d}"
+
+
+def save_charactor_data():
+    """現在のcharactorデータをJSONに保存する"""
+
+    with open(CHARACTOR_PATH, "w", encoding="utf-8") as f:
+        json.dump(
+            charactor,
+            f,
+            ensure_ascii=False,
+            indent=4
+        )
+
+
+async def register_charactor(message, attachment):
+    """Discordに添付されたCSVからキャラクターを登録する"""
+
+    # CSVを読み込む
+    file_data = await attachment.read()
+
+    try:
+        csv_text = file_data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        try:
+            csv_text = file_data.decode("cp932")
+        except UnicodeDecodeError:
+            return None, "CSVを読み込めなかったよ"
+
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+
+    name = None
+
+    for row in rows:
+        if len(row) >= 2 and row[0] == "NAME":
+            name = row[1].strip()
+            break
+
+    if not name:
+        return None, "キャラクター名(NAME)が見つからないよ"
+
+
+
+    for charactor_id, character_data in charactor["charactor"].items():
+        if character_data.get("name") == name:
+            return None, f"「{name}」はすでに登録されているよ（{charactor_id}）"
+
+    status = {}
+
+    ability_names = [
+        "SAN",
+        "LUCK",
+        "HP",
+        "MP",
+        "MOV",
+        "STR",
+        "CON",
+        "POW",
+        "DEX",
+        "APP",
+        "SIZ",
+        "INT",
+        "EDU"
+    ]
+
+    for row in rows:
+        if len(row) < 5:
+            continue
+
+        if row[0] not in ability_names:
+            continue
+
+        value = row[4].strip()
+
+        if not value:
+            continue
+
+        try:
+            status[row[0]] = int(value)
+        except ValueError:
+            pass
+
+    if "HP" in status:
+        status["MAX_HP"] = status["HP"]
+
+
+    skills = {}
+
+    skill_start = None
+
+    for i, row in enumerate(rows):
+        if len(row) > 0 and row[0] == "技能名":
+            skill_start = i + 1
+            break
+
+    if skill_start is not None:
+
+        for row in rows[skill_start:]:
+
+            # 別セクションに入ったら終了
+            if len(row) > 0 and row[0] in [
+                "戦闘",
+                "武器",
+                "項目",
+                "装備品と所持品",
+                "収入と財産"
+            ]:
+                break
+
+            # 技能名 + RGまで存在する必要がある
+            if len(row) < 6:
+                continue
+
+            skill_name = row[0].strip()
+            skill_value = row[5].strip()
+
+            # 空行や無名技能を無視
+            if not skill_name:
+                continue
+
+            if not skill_value:
+                continue
+
+            try:
+                skills[skill_name] = int(skill_value)
+            except ValueError:
+                continue
+
+    charactor_id = generate_charactor_id()
+
+    charactor["charactor"][charactor_id] = {
+        "name": name,
+        "skills": {
+            **status,
+            **skills
+        }
+    }
+
+    user_id = str(message.author.id)
+
+    charactor["using_charactor"][user_id] = {
+        "id": charactor_id,
+        "name": name
+    }
+
+    save_charactor_data()
+
+    return charactor_id, name
+
+def delete_charactor(charactor_id):
+    # キャラクターが存在するか確認
+    if charactor_id not in charactor["charactor"]:
+        return False, "そのキャラクターは登録されてないよ"
+
+    name = charactor["charactor"][charactor_id]["name"]
+
+    # キャラクター本体を削除
+    del charactor["charactor"][charactor_id]
+
+    # 使用キャラとして設定されているユーザーからも削除
+    deleted_users = []
+
+    for user_id, using_data in list(charactor["using_charactor"].items()):
+        if using_data.get("id") == charactor_id:
+            del charactor["using_charactor"][user_id]
+            deleted_users.append(user_id)
+
+    # JSONに保存
+    save_charactor_data()
+
+    return True, name
 
 @client.event
 async def on_ready():
@@ -204,6 +391,110 @@ async def on_message(message):
         await message.channel.send(message_content)
         return
 
+    if message.content.startswith("!db update_charactor_sheet") \
+        or message.content.strip().lower() == "!db ucs":
+
+        if not message.attachments:
+            await message.channel.send(
+                f"{message.author.mention} CSVを添付してね"
+            )
+            return
+
+        attachment = message.attachments[0]
+
+        if not attachment.filename.lower().endswith(".csv"):
+            await message.channel.send(
+                f"{message.author.mention} CSVファイルを添付してね"
+            )
+            return
+
+        charactor_id, name = await register_charactor(
+            message,
+            attachment
+        )
+
+        if charactor_id is None:
+            await message.channel.send(
+                f"{message.author.mention} {name}"
+            )
+            return
+
+        await message.channel.send(
+            f"{message.author.mention} "
+            f"「{name}」を {charactor_id} として登録したよ(^^)"
+        )
+
+        return
+
+    if message.content.startswith("!db delete_charactor_sheet") \
+            or message.content.startswith("!db dcs"):
+
+        text = message.content.split()
+
+        if len(text) < 3:
+            await message.channel.send(
+                f"{message.author.mention} 削除するキャラクターIDを指定してね\n"
+                f"例: `!db dcs C-0001`"
+            )
+            return
+
+        charactor_id = text[2]
+
+        # キャラクターの存在確認
+        character_data = charactor["charactor"].get(charactor_id)
+
+        if character_data is None:
+            await message.channel.send(
+                f"{message.author.mention} "
+                f"{charactor_id} は登録されてないよ"
+            )
+            return
+
+        name = character_data.get("name", "名前不明")
+
+        # 確認メッセージ
+        await message.channel.send(
+            f"{message.author.mention}\n"
+            f"本当に「{name}」({charactor_id})を削除する？\n"
+            f"削除するならキャラクターの名前を入力してね。\n"
+            f"10秒以内に答えてね。"
+        )
+
+        def check(reply):
+            return (
+                reply.author == message.author
+                and reply.channel == message.channel
+                and reply.content.lower() == f"{name}"
+            )
+
+        try:
+            await client.wait_for(
+                "message",
+                timeout=10.0,
+                check=check
+            )
+
+        except asyncio.TimeoutError:
+            await message.channel.send(
+                f"{message.author.mention} 時間切れ。削除しなかったよ。"
+            )
+            return
+
+        # 実際に削除
+        success, result = delete_charactor(charactor_id)
+
+        if not success:
+            await message.channel.send(
+                f"{message.author.mention} {result}"
+            )
+            return
+
+        await message.channel.send(
+            f"{message.author.mention} "
+            f"「{result}」({charactor_id})を削除したよ。"
+        )
+
+        return
 
     text = message.content.split()
     for i, t in enumerate(text):
