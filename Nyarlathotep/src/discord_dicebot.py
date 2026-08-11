@@ -1,12 +1,19 @@
 import discord
 import os
 from dotenv import load_dotenv
+import json
 import random
 import math
 import re
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
+
+skill_file_path = "skill_list.json"
+with open(skill_file_path, "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+skill_list = data.get("skills", [])
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -33,6 +40,40 @@ def judgement(result, target):
     else:
         return "失敗"
 
+def create_message_content(author, skill=None, num_dice, num_sides, rolls, total, result, judge=None, operator=None, modifier=None):
+    expr = f"{author}"
+
+    if skill is not None:
+        expr += f" ({skill})"
+
+    expr += f" {num_dice}d{num_sides}"
+
+    if operator:
+        expr += f"\\{operator}{modifier}"
+
+    if num_dice == 1:
+        detail = str(rolls[0])
+    else:
+        detail = f"{rolls} = {total}"
+
+    if operator:
+        detail += f"\\{operator}{modifier} \n--> {result}"
+
+    if judge:
+        detail += f" ({judge})"
+    return f"{expr}\n--> {detail}"
+
+def chack_next_word(word):
+    skill = None
+    target = None
+
+    if word.isdigit() or (word.startswith('-') and word[1:].isdigit()):
+        target = int(word)
+    elif word in skill_list:
+        skill = word
+
+    return skill, target
+
 @client.event
 async def on_ready():
     print(f'We have logged in as {client.user}')
@@ -43,26 +84,42 @@ async def on_message(message):
         return
 
     if message.content.startswith('よぐぱんち'):
+        author = message.author.mention
         num_dice, num_sides = 1, 3
         rolls, result = roll_dice(num_dice, num_sides)
-        await message.channel.send(f'{message.author.mention} {num_dice}d{num_sides} \n --> {result}')
+        message_content = create_message_content(author, None, num_dice, num_sides, rolls, sum(rolls), result)
+        await message.channel.send(message_content)
 
     if re.search(r"精神分析",message.content) and str(message.author.id) == "1529660407525019799":
+        author = message.author.mention
+        skill = "精神分析"
         rolls, result = roll_dice(1, 100)
         judge = judgement(result, 95)
-        await message.channel.send(f'{message.author.mention} 精神分析 1d100 \n --> {result} ({judge})')
+        message_content = create_message_content(author, skill, 1, 100, rolls, sum(rolls), result, judge)
+        await message.channel.send(message_content)
 
     text = message.content.split()
     for i, t in enumerate(text):
         if t.lower() == "dd":
             rolls, result = roll_dice(1, 100)
-            if i + 1 < len(text) and (text[i + 1].isdigit() or (text[i + 1].startswith('-') and text[i + 1][1:].isdigit())):
-                target = int(text[i+1])
-                judge = judgement(result, target)
-                await message.channel.send(f'{message.author.mention} 1d100 \n --> {result} ({judge})')
+            if i + 1 < len(text):
+                skill ,target = chack_next_word(text[i+1])
+                if target is not None:
+                    judge = judgement(result, target)
+                    message_content = create_message_content(message.author.mention, skill, 1, 100, rolls, sum(rolls), result, judge) 
+                else:
+                    message_content = create_message_content(message.author.mention, skill, 1, 100, rolls, sum(rolls), result)
+                message_content = create_message_content(message.author.mention, None, 1, 100, rolls, sum(rolls), result, judge)
             else:
-                await message.channel.send(f'{message.author.mention} 1d100 \n --> {result}')
-            return
+                message_content = create_message_content(message.author.mention, None, 1, 100, rolls, sum(rolls), result, None)
+            await message.channel.send(message_content)
+        m = re.fullmatch(r"dd(\d+)",t)
+        if m and (m.group(1).isdigit() or (m.group(1).startswith('-') and m.group(1)[1:].isdigit())):
+            target = int(m.group(1))
+            rolls, result = roll_dice(1, 100)
+            judge = judgement(result, target)
+            message_content = create_message_content(message.author.mention, None, 1, 100, rolls, sum(rolls), result, judge)
+            await message.channel.send(message_content)
         
         m = re.fullmatch(r"(\d+)[dD](\d+)(?:([+\-*/^])(\d+))?", t)
         if m:
@@ -133,6 +190,5 @@ async def on_message(message):
                     f"--> {totals}^{modifier}\n"
                     f"--> {result}"
                 )
-            return
 
 client.run(TOKEN)
