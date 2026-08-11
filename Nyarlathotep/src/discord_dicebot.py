@@ -45,8 +45,11 @@ def judgement(result, target):
     else:
         return "失敗"
 
-def create_message_content(author, num_dice, num_sides, rolls, result, target=None, judge=None, operator=None, modifier=None ,skill=None):
+def create_message_content(author, num_dice, num_sides, rolls, result, name=None, target=None, judge=None, operator=None, modifier=None ,skill=None):
     expr = f"{author}"
+
+    if name is not None:
+        expr += f" {name}"
 
     if skill is not None:
         expr += f" ({skill})"
@@ -118,7 +121,12 @@ def get_charactor(message):
 
 
 def get_skill_value(charactor_id, skill):
-    skills = charactor["charactor"][charactor_id].get("skills")
+    character_data = charactor["charactor"].get(charactor_id)
+
+    if character_data is None:
+        return None
+
+    skills = character_data.get("skills")
 
     if skills is None:
         return None
@@ -152,6 +160,28 @@ async def on_message(message):
         await message.channel.send(message_content)
         return
 
+    # if message.content.startswith('SANC'):
+    #     author = message.author.mention
+    #     skill = "SAN"
+    #     charactor_id = get_charactor(message)
+    #     if charactor_id is not None:
+    #         name = charactor["charactor"][charactor_id]["name"]
+    #         target = get_skill_value(charactor_id,skill)
+    #         num_dice, num_sides = 1, 100
+    #         rolls, result = roll_dice(num_dice, num_sides)
+    #         judge = judgement(result,target)
+    #         message_content = create_message_content(
+    #             author, 
+    #             num_dice, 
+    #             num_sides, 
+    #             rolls, 
+    #             sum(rolls), 
+    #             target=target,
+    #             judge=judge,
+    #             name=name,
+    #             skill=skill)
+    #         await message.channel.send(message_content)
+
     if re.search(r"精神分析",message.content) and str(message.author.id) == "1529660407525019799":
         author = message.author.mention
         skill = "精神分析"
@@ -166,12 +196,14 @@ async def on_message(message):
             num_sides,
             rolls,
             sum(rolls),
-            target,
-            judge,
+            target=target,
+            judge=judge,
+            name="よぐ=そとーす",
             skill=skill)
         
         await message.channel.send(message_content)
         return
+
 
     text = message.content.split()
     for i, t in enumerate(text):
@@ -179,6 +211,7 @@ async def on_message(message):
         if skill is not None or target is not None or t.lower() in ["dd", "sdd"]:
             num_dice, num_sides = 1, 100
             rolls, result = roll_dice(num_dice, num_sides)
+            name = None
 
             if skill is not None:
                 charactor_id = get_charactor(message)
@@ -186,11 +219,11 @@ async def on_message(message):
                     await message.channel.send(f"{message.author.mention} キャラが登録されてないよ")
                     skill = None
                 else:
+                    name = charactor["charactor"][charactor_id]["name"]
                     target = get_skill_value(charactor_id,skill)
                     if target is None:
-                        name = charactor["charactor"][charactor_id]["name"]
                         await message.channel.send(f"{message.author.mention} {name}にその技能はないよ")
-                        skill = None
+                        skill, name = None, None                    
 
             judge = None
             if target is not None:
@@ -202,8 +235,9 @@ async def on_message(message):
                 num_sides,
                 rolls,
                 result,
-                target,
-                judge,
+                target=target,
+                judge=judge,
+                name=name,
                 skill=skill
             )
 
