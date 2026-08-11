@@ -117,13 +117,8 @@ def get_charactor(message):
     return charactor_id
 
 
-def get_skill_value(id, skill):
-    character_data = charactor["charactor"].get(id)
-
-    if character_data is None:
-        return None
-
-    skills = character_data.get("skills")
+def get_skill_value(charactor_id, skill):
+    skills = charactor["charactor"][charactor_id].get("skills")
 
     if skills is None:
         return None
@@ -189,8 +184,13 @@ async def on_message(message):
                 charactor_id = get_charactor(message)
                 if charactor_id is None:
                     await message.channel.send(f"{message.author.mention} キャラが登録されてないよ")
+                    skill = None
                 else:
                     target = get_skill_value(charactor_id,skill)
+                    if target is None:
+                        name = charactor["charactor"][charactor_id]["name"]
+                        await message.channel.send(f"{message.author.mention} {name}にその技能はないよ")
+                        skill = None
 
             judge = None
             if target is not None:
@@ -215,5 +215,4 @@ async def on_message(message):
             else:
                 await message.channel.send(message_content)
 
-        
 client.run(TOKEN)
