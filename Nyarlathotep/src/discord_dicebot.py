@@ -455,7 +455,7 @@ async def on_message(message):
         # 確認メッセージ
         await message.channel.send(
             f"{message.author.mention}\n"
-            f"本当に「{name}」({charactor_id})を削除する？\n"
+            f"本当に「{name}」({charactor_id})を削除するの？\n"
             f"削除するならキャラクターの名前を入力してね。\n"
             f"10秒以内に答えてね。"
         )
@@ -476,7 +476,7 @@ async def on_message(message):
 
         except asyncio.TimeoutError:
             await message.channel.send(
-                f"{message.author.mention} 時間切れ。削除しなかったよ。"
+                f"{message.author.mention} ざんねん時間切れ。削除はしないでおくね。"
             )
             return
 
@@ -491,7 +491,7 @@ async def on_message(message):
 
         await message.channel.send(
             f"{message.author.mention} "
-            f"「{result}」({charactor_id})を削除したよ。"
+            f"「{result}」({charactor_id})を削除したよ。ばいば～い"
         )
 
         return
