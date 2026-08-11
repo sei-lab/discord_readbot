@@ -105,6 +105,7 @@ async def on_message(message):
 
     if message.content.startswith('よぐぱんち'):
         author = message.author.mention
+        skill = "よぐぱんち"
         num_dice, num_sides = 1, 3
         rolls, result = roll_dice(num_dice, num_sides)
         message_content = create_message_content(
@@ -113,19 +114,28 @@ async def on_message(message):
             num_sides, 
             rolls, 
             sum(rolls), 
-            skill="よぐぱんち")
+            skill=skill)
         await message.channel.send(message_content)
+        return
 
     if re.search(r"精神分析",message.content) and str(message.author.id) == "1529660407525019799":
         author = message.author.mention
         skill = "精神分析"
-        num_dice = 1
-        num_sides = 100
+        num_dice, num_sides = 1, 100
         target = 95
         rolls, result = roll_dice(num_dice, num_sides)
         judge = judgement(result, target)
-        message_content = create_message_content(author, num_dice, num_sides, rolls, sum(rolls), target, judge, skill=skill)
+        message_content = create_message_content(
+            author,
+            num_dice,
+            num_sides,
+            rolls,
+            sum(rolls),
+            target,
+            judge,
+            skill=skill)
         await message.channel.send(message_content)
+        return
 
     text = message.content.split()
     for i, t in enumerate(text):
@@ -171,8 +181,9 @@ async def on_message(message):
                 skill=skill
             )
 
-            await message.delete()
-            await message.channel.send("🎲secret dice(^^)🎲")
+            if message.guild is not None:
+                await message.delete()
+                await message.channel.send("🎲secret dice(^^)🎲")
             await message.author.send(message_content)
 
         
