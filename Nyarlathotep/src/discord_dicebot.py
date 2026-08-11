@@ -12,10 +12,13 @@ TRPG_PATH = os.getenv("TRPG_PATH")
 CHARACTOR_PATH = os.getenv("CHARACTOR_PATH")
 
 with open(TRPG_PATH, "r", encoding="utf-8") as f:
-    data = json.load(f)
+    trpg = json.load(f)
 
-skill_list = data.get("skills", [])
-blacklists = data.get("blacklists", [])
+with open(CHARACTOR_PATH, "r", encoding="utf-8") as f:
+    charactor = json.load(f)
+
+skill_list = trpg.get("skills", [])
+blacklists = trpg.get("blacklists", [])
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -102,6 +105,31 @@ def parse(text, i):
 
     return None, None, False
 
+def get_charactor(message):
+    user_id = str(message.author.id)
+
+    user_data = charactor["using_charactor"].get(user_id)
+
+    if user_data is None:
+        return None
+
+    charactor_id = user_data["id"]
+    return charactor_id
+
+
+def get_skill_value(id, skill):
+    character_data = charactor["charactor"].get(id)
+
+    if character_data is None:
+        return None
+
+    skills = character_data.get("skills")
+
+    if skills is None:
+        return None
+
+    return skills.get(skill)
+
 @client.event
 async def on_ready():
     print(f'We have logged in as {client.user}')
@@ -152,11 +180,17 @@ async def on_message(message):
 
     text = message.content.split()
     for i, t in enumerate(text):
-
         skill, target, secret= parse(text, i)
         if skill is not None or target is not None or t.lower() in ["dd", "sdd"]:
             num_dice, num_sides = 1, 100
             rolls, result = roll_dice(num_dice, num_sides)
+
+            if skill is not None:
+                charactor_id = get_charactor(message)
+                if charactor_id is None:
+                    await message.channel.send(f"{message.author.mention} キャラが登録されてないよ")
+                else:
+                    target = get_skill_value(charactor_id,skill)
 
             judge = None
             if target is not None:
