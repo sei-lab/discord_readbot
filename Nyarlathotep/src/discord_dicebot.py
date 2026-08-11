@@ -347,28 +347,6 @@ async def on_message(message):
         await message.channel.send(message_content)
         return
 
-    # if message.content.startswith('SANC'):
-    #     author = message.author.mention
-    #     skill = "SAN"
-    #     charactor_id = get_charactor(message)
-    #     if charactor_id is not None:
-    #         name = charactor["charactor"][charactor_id]["name"]
-    #         target = get_skill_value(charactor_id,skill)
-    #         num_dice, num_sides = 1, 100
-    #         rolls, result = roll_dice(num_dice, num_sides)
-    #         judge = judgement(result,target)
-    #         message_content = create_message_content(
-    #             author, 
-    #             num_dice, 
-    #             num_sides, 
-    #             rolls, 
-    #             sum(rolls), 
-    #             target=target,
-    #             judge=judge,
-    #             name=name,
-    #             skill=skill)
-    #         await message.channel.send(message_content)
-
     if re.search(r"精神分析",message.content) and str(message.author.id) == "1529660407525019799":
         author = message.author.mention
         skill = "精神分析"
