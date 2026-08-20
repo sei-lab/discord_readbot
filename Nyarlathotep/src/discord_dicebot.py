@@ -110,7 +110,7 @@ def parse(text, i):
     if text[i].lower() == "sdd":
         if i + 1 < len(text):
             skill, target = check_next_word(text[i + 1])
-            return skill, target, True
+            return dd_num, dd_sides, skill, target, True
         return dd_num, dd_sides, None, None, True
 
     m = re.fullmatch(rf"sdd(-?\d+)", text[i])
