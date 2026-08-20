@@ -78,11 +78,11 @@ def create_message_content(author, num_dice, num_sides, rolls, result, name=None
         if operator:
             detail += f"\\{operator}{modifier} \n--> {result}"
     else:
-        detail = f"--> {result}"
+        detail = f"{result}"
 
     if judge:
         detail += f" ({judge})"
-        
+
     return f"{expr}\n--> {detail}"
 
 def check_next_word(word):
@@ -498,7 +498,12 @@ async def on_message(message):
     text = message.content.split()
     for i, t in enumerate(text):
         num_dice, num_sides, skill, target, secret= parse(text, i)
-        if num_dice is not None and num_sides is not None:            
+        if num_dice is not None and num_sides is not None:      
+
+            if num_dice * num_sides > 1000000:
+                await message.channel.send(f"{message.author.mention} ちょちょちょ長すぎるって")
+                return
+                  
             rolls, result = roll_dice(num_dice, num_sides)
             name = None
 
@@ -518,7 +523,7 @@ async def on_message(message):
             if target is not None:
                 judge = judgement(result, target)
 
-            if len(str(rolls)) > 1800:
+            if len(str(rolls)) > 500:
                 rolls = None
 
             message_content = create_message_content(
