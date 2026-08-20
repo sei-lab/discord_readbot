@@ -23,9 +23,13 @@ with open(CHARACTOR_PATH, "r", encoding="utf-8") as f:
 skill_list = trpg.get("skills", [])
 blacklists = trpg.get("blacklists", [])
 
-intents = discord.Intents.default()
-intents.message_content = True
+intents                  = discord.Intents.default()
+intents.message_content  = True
+
 client = discord.Client(intents=intents)
+
+dd_num   = 1
+dd_sides = 100
 
 def roll_dice(num_dice, num_sides):
     rolls = [random.randint(1, num_sides) for _ in range(num_dice)]
@@ -43,7 +47,7 @@ def judgement(result, target):
         return "ハード成功"
     elif result <= target:
         return "成功"
-    elif result >= 95:
+    elif result >= 96:
         return "ファンブル"
     else:
         return "失敗"
@@ -55,7 +59,7 @@ def create_message_content(author, num_dice, num_sides, rolls, result, name=None
         expr += f" {name}"
 
     if skill is not None:
-        expr += f" ({skill})"
+        expr += f" 【{skill}】"
 
     expr += f" {num_dice}d{num_sides}"
 
@@ -65,16 +69,20 @@ def create_message_content(author, num_dice, num_sides, rolls, result, name=None
     if target is not None:
         expr += f" <= {target}"
 
-    if num_dice == 1:
-        detail = str(rolls[0])
-    else:
-        detail = f"{rolls} = {sum(rolls)}"
+    if rolls is not None:
+        if num_dice == 1:
+            detail = str(rolls[0])
+        else:
+            detail = f"{rolls} = {sum(rolls)}"
 
-    if operator:
-        detail += f"\\{operator}{modifier} \n--> {result}"
+        if operator:
+            detail += f"\\{operator}{modifier} \n--> {result}"
+    else:
+        detail = f"--> {result}"
 
     if judge:
         detail += f" ({judge})"
+        
     return f"{expr}\n--> {detail}"
 
 def check_next_word(word):
@@ -92,24 +100,36 @@ def parse(text, i):
     if text[i].lower() == "dd":
         if i + 1 < len(text):
             skill, target = check_next_word(text[i + 1])
-            return skill, target, False
-        return None, None, False
+            return dd_num, dd_sides, skill, target, False
+        return dd_num, dd_sides, None, None, False
 
     m = re.fullmatch(rf"dd(-?\d+)", text[i])
     if m:
-        return None, int(m.group(1)), False
+        return dd_num, dd_sides, None, int(m.group(1)), False
 
     if text[i].lower() == "sdd":
         if i + 1 < len(text):
             skill, target = check_next_word(text[i + 1])
             return skill, target, True
-        return None, None, True
+        return dd_num, dd_sides, None, None, True
 
     m = re.fullmatch(rf"sdd(-?\d+)", text[i])
     if m:
-        return None, int(m.group(1)), True
+        return dd_num, dd_sides, None, int(m.group(1)), True
 
-    return None, None, False
+    m = re.fullmatch(r"(\d+)[dD](\d+)", text[i])
+    if m:
+        num_dice = int(m.group(1))
+        num_sides = int(m.group(2))
+        return num_dice, num_sides, None, None, False
+
+    m = re.fullmatch(r"s(\d+)[dD](\d+)", text[i])
+    if m:
+        num_dice = int(m.group(1))
+        num_sides = int(m.group(2))
+        return num_dice, num_sides, None, None, True
+
+    return  None, None, None, None, False
 
 def get_charactor(message):
     user_id = str(message.author.id)
@@ -149,7 +169,6 @@ def generate_charactor_id():
 
     return f"C-{max_id + 1:04d}"
 
-
 def save_charactor_data():
     """現在のcharactorデータをJSONに保存する"""
 
@@ -160,7 +179,6 @@ def save_charactor_data():
             ensure_ascii=False,
             indent=4
         )
-
 
 async def register_charactor(message, attachment):
     """Discordに添付されたCSVからキャラクターを登録する"""
@@ -190,7 +208,6 @@ async def register_charactor(message, attachment):
         return None, "キャラクター名(NAME)が見つからないよ"
 
 
-
     for charactor_id, character_data in charactor["charactor"].items():
         if character_data.get("name") == name:
             return None, f"「{name}」はすでに登録されているよ（{charactor_id}）"
@@ -217,7 +234,10 @@ async def register_charactor(message, attachment):
         if len(row) < 5:
             continue
 
-        if row[0] not in ability_names:
+        # スプレッドシート上の末尾の * を除去
+        ability_name = row[0].strip().rstrip("*")
+
+        if ability_name not in ability_names:
             continue
 
         value = row[4].strip()
@@ -226,7 +246,7 @@ async def register_charactor(message, attachment):
             continue
 
         try:
-            status[row[0]] = int(value)
+            status[ability_name] = int(value)
         except ValueError:
             pass
 
@@ -369,116 +389,116 @@ async def on_message(message):
         await message.channel.send(message_content)
         return
 
-    if message.content.startswith("!db update_charactor_sheet") \
-        or message.content.strip().lower() == "!db ucs":
+    if message.guild and any(role.id == 1511381779968163871 for role in message.author.roles):
+        if message.content.startswith("!db update_charactor_sheet") \
+            or message.content.strip().lower() == "!db ucs":
 
-        if not message.attachments:
-            await message.channel.send(
-                f"{message.author.mention} CSVを添付してね"
+            if not message.attachments:
+                await message.channel.send(
+                    f"{message.author.mention} CSVを添付してね"
+                )
+                return
+
+            attachment = message.attachments[0]
+
+            if not attachment.filename.lower().endswith(".csv"):
+                await message.channel.send(
+                    f"{message.author.mention} CSVファイルを添付してね"
+                )
+                return
+
+            charactor_id, name = await register_charactor(
+                message,
+                attachment
             )
-            return
 
-        attachment = message.attachments[0]
+            if charactor_id is None:
+                await message.channel.send(
+                    f"{message.author.mention} {name}"
+                )
+                return
 
-        if not attachment.filename.lower().endswith(".csv"):
-            await message.channel.send(
-                f"{message.author.mention} CSVファイルを添付してね"
-            )
-            return
-
-        charactor_id, name = await register_charactor(
-            message,
-            attachment
-        )
-
-        if charactor_id is None:
-            await message.channel.send(
-                f"{message.author.mention} {name}"
-            )
-            return
-
-        await message.channel.send(
-            f"{message.author.mention} "
-            f"「{name}」を {charactor_id} として登録したよ(^^)"
-        )
-
-        return
-
-    if message.content.startswith("!db delete_charactor_sheet") \
-            or message.content.startswith("!db dcs"):
-
-        text = message.content.split()
-
-        if len(text) < 3:
-            await message.channel.send(
-                f"{message.author.mention} 削除するキャラクターIDを指定してね\n"
-                f"例: `!db dcs C-0001`"
-            )
-            return
-
-        charactor_id = text[2]
-
-        # キャラクターの存在確認
-        character_data = charactor["charactor"].get(charactor_id)
-
-        if character_data is None:
             await message.channel.send(
                 f"{message.author.mention} "
-                f"{charactor_id} は登録されてないよ"
+                f"「{name}」を {charactor_id} として登録したよ(^^)"
             )
+
             return
 
-        name = character_data.get("name", "名前不明")
+        if message.content.startswith("!db delete_charactor_sheet") \
+                or message.content.startswith("!db dcs"):
 
-        # 確認メッセージ
-        await message.channel.send(
-            f"{message.author.mention}\n"
-            f"本当に「{name}」({charactor_id})を削除するの？\n"
-            f"削除するならキャラクターの名前を入力してね。\n"
-            f"10秒以内に答えてね。"
-        )
+            text = message.content.split()
 
-        def check(reply):
-            return (
-                reply.author == message.author
-                and reply.channel == message.channel
-                and reply.content.lower() == f"{name}"
-            )
+            if len(text) < 3:
+                await message.channel.send(
+                    f"{message.author.mention} 削除するキャラクターIDを指定してね\n"
+                    f"例: `!db dcs C-0001`"
+                )
+                return
 
-        try:
-            await client.wait_for(
-                "message",
-                timeout=10.0,
-                check=check
-            )
+            charactor_id = text[2]
 
-        except asyncio.TimeoutError:
+            # キャラクターの存在確認
+            character_data = charactor["charactor"].get(charactor_id)
+
+            if character_data is None:
+                await message.channel.send(
+                    f"{message.author.mention} "
+                    f"{charactor_id} は登録されてないよ"
+                )
+                return
+
+            name = character_data.get("name", "名前不明")
+
+            # 確認メッセージ
             await message.channel.send(
-                f"{message.author.mention} ざんねん時間切れ。削除はしないでおくね。"
+                f"{message.author.mention}\n"
+                f"本当に「{name}」({charactor_id})を削除するの？\n"
+                f"削除するならキャラクターの名前を入力してね。\n"
+                f"15秒以内に答えてね。"
             )
-            return
 
-        # 実際に削除
-        success, result = delete_charactor(charactor_id)
+            def check(reply):
+                return (
+                    reply.author == message.author
+                    and reply.channel == message.channel
+                    and reply.content.lower() == f"{name}"
+                )
 
-        if not success:
+            try:
+                await client.wait_for(
+                    "message",
+                    timeout=15.0,
+                    check=check
+                )
+
+            except asyncio.TimeoutError:
+                await message.channel.send(
+                    f"{message.author.mention} ざんねん時間切れ。削除はしないでおくね。"
+                )
+                return
+
+            # 実際に削除
+            success, result = delete_charactor(charactor_id)
+
+            if not success:
+                await message.channel.send(
+                    f"{message.author.mention} {result}"
+                )
+                return
+
             await message.channel.send(
-                f"{message.author.mention} {result}"
+                f"{message.author.mention} "
+                f"「{result}」({charactor_id})を削除したよ。ばいば～い"
             )
+
             return
-
-        await message.channel.send(
-            f"{message.author.mention} "
-            f"「{result}」({charactor_id})を削除したよ。ばいば～い"
-        )
-
-        return
 
     text = message.content.split()
     for i, t in enumerate(text):
-        skill, target, secret= parse(text, i)
-        if skill is not None or target is not None or t.lower() in ["dd", "sdd"]:
-            num_dice, num_sides = 1, 100
+        num_dice, num_sides, skill, target, secret= parse(text, i)
+        if num_dice is not None and num_sides is not None:            
             rolls, result = roll_dice(num_dice, num_sides)
             name = None
 
@@ -497,6 +517,9 @@ async def on_message(message):
             judge = None
             if target is not None:
                 judge = judgement(result, target)
+
+            if len(str(rolls)) > 1800:
+                rolls = None
 
             message_content = create_message_content(
                 message.author.mention,
@@ -517,5 +540,6 @@ async def on_message(message):
                 await message.author.send(message_content)
             else:
                 await message.channel.send(message_content)
+        
 
 client.run(TOKEN)
